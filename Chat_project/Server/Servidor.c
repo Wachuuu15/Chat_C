@@ -27,12 +27,9 @@ ServerInfo server;
 
 void *handle_client(void *arg) {
     int client_socket = *((int *)arg);
-    char buffer[BUFFER_SIZE];
     int option;
-    int code;
-    char message[BUFFER_SIZE];
 
-    if (recv(client_socket, &option, sizeof(int), 0) <= 0) {
+    if (recv(client_socket, &option, sizeof(option), 0) <= 0) {
         perror("Error receiving option from client");
         close(client_socket);
         pthread_exit(NULL);
@@ -43,6 +40,7 @@ void *handle_client(void *arg) {
     close(client_socket);
     pthread_exit(NULL);
 }
+
 
 void handle_request(int client_socket, int option) {
     switch (option) {
@@ -137,17 +135,20 @@ void send_connected_users(int client_socket) {
     int count = server.client_count;
     send(client_socket, &count, sizeof(int), 0);
     for (int i = 0; i < server.client_count; i++) {
-        send(client_socket, &server.clients[i], sizeof(Client), 0);
+        send(client_socket, server.clients[i].username, sizeof(server.clients[i].username), 0);
     }
 }
 
-void change_status(char *username, char *status) {
+void change_status(int client_socket, const char *new_status) {
     pthread_mutex_lock(&server.mutex);
 
     for (int i = 0; i < server.client_count; i++) {
-        if (strcmp(server.clients[i].username, username) == 0) {
-            strcpy(server.clients[i].status, status);
-            break;
+        if (server.clients[i].socket == client_socket) {  
+            strcpy(server.clients[i].status, new_status);
+
+            send_simple_response(client_socket, "Estado actualizado con éxito.");
+
+            break; // Sale del bucle una vez que el estado ha sido cambiado
         }
     }
 
@@ -167,14 +168,38 @@ void send_message(int client_socket, char *recipient, char *message_text) {
     pthread_mutex_unlock(&server.mutex);
 }
 
-void send_user_info(int client_socket, char *username) {
+void send_private_message(char *recipient_username, char *message, int sender_socket) {
     pthread_mutex_lock(&server.mutex);
 
     for (int i = 0; i < server.client_count; i++) {
-        if (strcmp(server.clients[i].username, username) == 0) {
-            send(client_socket, &server.clients[i], sizeof(Client), 0);
+        if (strcmp(server.clients[i].username, recipient_username) == 0) {
+            send(server.clients[i].socket, message, strlen(message), 0);
             break;
         }
+    }
+
+    pthread_mutex_unlock(&server.mutex);
+}
+
+
+void send_user_info(int client_socket, char *username) {
+    pthread_mutex_lock(&server.mutex);
+    int user_found = 0; 
+
+    for (int i = 0; i < server.client_count; i++) {
+        if (strcmp(server.clients[i].username, username) == 0) {
+            user_found = 1; 
+            send(client_socket, &user_found, sizeof(int), 0);
+            
+            send(client_socket, &server.clients[i].username, sizeof(server.clients[i].username), 0);
+            send(client_socket, &server.clients[i].ip, sizeof(server.clients[i].ip), 0);
+            send(client_socket, &server.clients[i].status, sizeof(server.clients[i].status), 0);
+            break;
+        }
+    }
+
+    if (!user_found) {
+        send(client_socket, &user_found, sizeof(int), 0);  
     }
 
     pthread_mutex_unlock(&server.mutex);
@@ -185,6 +210,19 @@ void send_response(int client_socket, int option, int code, char *message) {
     send(client_socket, &code, sizeof(int), 0);
     send(client_socket, message, strlen(message), 0);
 }
+
+void broadcast_message(char *message, int sender_socket) {
+    pthread_mutex_lock(&server.mutex);
+
+    for (int i = 0; i < server.client_count; i++) {
+        if (server.clients[i].socket != sender_socket) {  
+            send(server.clients[i].socket, message, strlen(message), 0);
+        }
+    }
+
+    pthread_mutex_unlock(&server.mutex);
+}
+
 
 int main(int argc, char *argv[]) {
     int server_socket, client_socket, port;
