@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
                             break;
                         default:
                             printf("Opción no válida. Selecciona un estado válido.\n");
-                            return;
+                            break;
                     }
 
                     option = 3;  //VERIFICAR
