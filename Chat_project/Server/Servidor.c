@@ -59,7 +59,14 @@ void handle_request(int client_socket, int option) {
             break;
         case 2: 
             {
-                send_connected_users(client_socket);
+                char recipient[50], message_text[BUFFER_SIZE];
+                if (recv(client_socket, &recipient, sizeof(recipient), 0) <= 0 || recv(client_socket, &message_text, sizeof(message_text), 0) <= 0) {
+                    perror("Error receiving message data from client");
+                    close(client_socket);
+                    pthread_exit(NULL);
+                }
+                send_message(client_socket, recipient, message_text);
+
             }
             break;
         case 3: 
@@ -75,13 +82,7 @@ void handle_request(int client_socket, int option) {
             break;
         case 4:
             {
-                char recipient[50], message_text[BUFFER_SIZE];
-                if (recv(client_socket, &recipient, sizeof(recipient), 0) <= 0 || recv(client_socket, &message_text, sizeof(message_text), 0) <= 0) {
-                    perror("Error receiving message data from client");
-                    close(client_socket);
-                    pthread_exit(NULL);
-                }
-                send_message(client_socket, recipient, message_text);
+                send_connected_users(client_socket);
             }
             break;
         case 5:
@@ -95,6 +96,19 @@ void handle_request(int client_socket, int option) {
                 send_user_info(client_socket, username);
             }
             break;
+        case 6:
+            {
+
+                if (recv(client_socket, message, BUFFER_SIZE, 0) <= 0) {
+                    perror("Error receiving broadcast message from client");
+                    close(client_socket);
+                    pthread_exit(NULL);
+                }
+                
+                broadcast_message(message, client_socket);
+            }
+            break;
+    
         default:
             code = 500;
             sprintf(message, "Error: Invalid option");
@@ -141,6 +155,7 @@ void send_connected_users(int client_socket) {
     }
 }
 
+
 void change_status(int client_socket, const char *new_status) {
     pthread_mutex_lock(&server.mutex);
 
@@ -150,19 +165,6 @@ void change_status(int client_socket, const char *new_status) {
 
             send_simple_response(client_socket, "Estado actualizado con éxito.");
 
-            break; // Sale del bucle una vez que el estado ha sido cambiado
-        }
-    }
-
-    pthread_mutex_unlock(&server.mutex);
-}
-
-void send_message(int client_socket, char *recipient, char *message_text) {
-    pthread_mutex_lock(&server.mutex);
-
-    for (int i = 0; i < server.client_count; i++) {
-        if (strcmp(server.clients[i].username, recipient) == 0) {
-            send(server.clients[i].socket, message_text, strlen(message_text), 0);
             break;
         }
     }
@@ -170,7 +172,8 @@ void send_message(int client_socket, char *recipient, char *message_text) {
     pthread_mutex_unlock(&server.mutex);
 }
 
-void send_private_message(char *recipient_username, char *message, int sender_socket) {
+
+void send_message(char *recipient_username, char *message, int sender_socket) {
     pthread_mutex_lock(&server.mutex);
 
     for (int i = 0; i < server.client_count; i++) {

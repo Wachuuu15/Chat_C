@@ -40,46 +40,41 @@ int main(int argc, char *argv[]) {
     }
     printf("Connected to the server.\n");
     
-    int option = 1; 
-    send(sock, &option, sizeof(int), 0);
-    send(sock, username, strlen(username), 0);
-
-    char ip_address[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET, &(addr.sin_addr), ip_address, INET_ADDRSTRLEN);
-    send(sock, ip_address, strlen(ip_address), 0);
-
-    bzero(buffer, BUFFER_SIZE);
-    recv(sock, buffer, BUFFER_SIZE, 0);
-    printf("Server: %s\n", buffer);
+    int option; 
+    //send(sock, &option, sizeof(int), 0);
+    
 
     while (1) {
         printf("\nOpciones disponibles:\n");
-        printf("1. Chatear con todos los usuarios\n");
+        printf("1. Registrar\n");
         printf("2. Enviar y recibir mensajes directos, privados\n");
         printf("3. Cambiar de estado\n");
         printf("4. Listar los usuarios conectados\n");
         printf("5. Obtener información de un usuario\n");
-        printf("6. Ayuda\n");
-        printf("7. Salir\n");
+        printf("6. Chatear grupalmente\n");
+        printf("7. Ayuda\n");
+        printf("8. Salir\n");
         printf("Elige una opción: ");
         scanf("%d", &option);
         getchar();
 
         switch (option) {
             case 1:
-                printf("Enter message to broadcast ('quit' to exit): ");
-                fgets(buffer, BUFFER_SIZE, stdin);
-                buffer[strcspn(buffer, "\n")] = 0;  // Remueve el salto de línea
-
-                if (strcmp(buffer, "quit") == 0) {
-                    break;  
-                }
-
+                option = 1;
                 send(sock, &option, sizeof(int), 0);
-                send(sock, buffer, strlen(buffer), 0);
+                send(sock, username, strlen(username), 0);
+
+                char ip_address[INET_ADDRSTRLEN];
+                inet_ntop(AF_INET, &(addr.sin_addr), ip_address, INET_ADDRSTRLEN);
+                send(sock, ip_address, strlen(ip_address), 0);
+
+                bzero(buffer, BUFFER_SIZE);
+                recv(sock, buffer, BUFFER_SIZE, 0);
+                printf("Server: %s\n", buffer);
+
             break;
             case 2:
-                    option = 4;  // verificar
+                    option = 2;  // verificar
                     send(sock, &option, sizeof(int), 0); 
     
                     char recipient_username[50];
@@ -94,6 +89,10 @@ int main(int argc, char *argv[]) {
                     send(sock, message, strlen(message), 0); // envia el mensaje privado
                 break;
                 case 3:
+                    
+                    option = 5;  
+
+                    send(sock, &option, sizeof(int), 0);
                     printf("Elige un nuevo estado:\n");
                     printf("1. ACTIVO\n");
                     printf("2. OCUPADO\n");
@@ -127,7 +126,7 @@ int main(int argc, char *argv[]) {
 
                 break;
             case 4:
-                option = 4;  //VERIFICAR
+                option = 4;  
                 send(sock, &option, sizeof(int), 0);
 
                     int num_users;
@@ -176,6 +175,18 @@ int main(int argc, char *argv[]) {
 
                 break;
             case 6:
+                    printf("Enter message to broadcast ('quit' to exit): ");
+                    fgets(buffer, BUFFER_SIZE, stdin);
+                    buffer[strcspn(buffer, "\n")] = 0;  // Remueve el salto de línea
+
+                    if (strcmp(buffer, "quit") == 0) {
+                        break;  
+                    }
+
+                    send(sock, &option, sizeof(int), 0);
+                    send(sock, buffer, strlen(buffer), 0);
+                break;
+            case 7:
                     printf("\nComandos disponibles:\n");
                     printf("1. Chatear con todos los usuarios\n");
                     printf("2. Enviar y recibir mensajes directos, privados\n");
@@ -185,7 +196,7 @@ int main(int argc, char *argv[]) {
                     printf("6. Ayuda\n");
                     printf("7. Salir\n");
                 break;
-            case 7:
+            case 8:
                 printf("Saliendo...\n");
                 close(sock);
                 return 0;
