@@ -19,6 +19,7 @@ int main(int argc, char *argv[]) {
     int sock;
     struct sockaddr_in addr;
     char buffer[BUFFER_SIZE];
+    char message [BUFFER_SIZE];
 
     // Creación del socket
     sock = socket(AF_INET, SOCK_STREAM, 0);
@@ -140,7 +141,7 @@ int main(int argc, char *argv[]) {
                     // Recibe y muestra la lista de usuarios conectados
                     printf("Connected users:\n");
                     for (int i = 0; i < num_users; i++) {
-                        char username[50] = {0}
+                        char username[50] = {0};
                         recv(sock, username, sizeof(username), 0);
                         printf("- %s\n", username);
                     }

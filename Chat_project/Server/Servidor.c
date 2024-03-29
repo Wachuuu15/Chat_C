@@ -43,6 +43,8 @@ void *handle_client(void *arg) {
 
 
 void handle_request(int client_socket, int option) {
+    int code; 
+    char message[BUFFER_SIZE];
     switch (option) {
         case 1:
             {
