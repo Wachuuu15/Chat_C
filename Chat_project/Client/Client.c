@@ -12,16 +12,15 @@ int main(int argc, char *argv[]) {
         exit(1);
     }
 
-    char *username = argv[1]; 
-    char *ip = argv[2]; 
+    char *username = argv[1];
+    char *ip = argv[2];
     int port = atoi(argv[3]);
 
     int sock;
     struct sockaddr_in addr;
     char buffer[BUFFER_SIZE];
-    char message [BUFFER_SIZE];
+    char message[BUFFER_SIZE];
 
-    // Creación del socket
     sock = socket(AF_INET, SOCK_STREAM, 0);
     if (sock < 0) {
         perror("[-]Socket error");
@@ -41,22 +40,18 @@ int main(int argc, char *argv[]) {
     }
     printf("Connected to the server.\n");
     
-    // Register user
     int option = 1; 
     send(sock, &option, sizeof(int), 0);
-    send(sock, argv[1], strlen(argv[1]), 0); // Envía el nombre de usuario
+    send(sock, username, strlen(username), 0);
 
     char ip_address[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(addr.sin_addr), ip_address, INET_ADDRSTRLEN);
-    send(sock, ip_address, strlen(ip_address), 0); // Envía la dirección IP del cliente
+    send(sock, ip_address, strlen(ip_address), 0);
 
-    // Recepción de la respuesta del servidor
     bzero(buffer, BUFFER_SIZE);
     recv(sock, buffer, BUFFER_SIZE, 0);
     printf("Server: %s\n", buffer);
 
-
-    int option;  // Declaración de la variable fuera del bucle
     while (1) {
         printf("\nOpciones disponibles:\n");
         printf("1. Chatear con todos los usuarios\n");
@@ -193,9 +188,7 @@ int main(int argc, char *argv[]) {
             case 7:
                 printf("Saliendo...\n");
                 close(sock);
-                printf("Disconnected from the server.\n");
-
-                exit(0);
+                return 0;
             default:
                 printf("Opción no válida. Por favor, intenta de nuevo.\n");
         }
