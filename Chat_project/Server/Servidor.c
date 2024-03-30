@@ -25,6 +25,19 @@ typedef struct {
 
 ServerInfo server;
 
+
+void *handle_client(void *arg);
+void handle_request(int client_socket, int option);
+void register_user(int client_socket, char *username, char *ip);
+void send_connected_users(int client_socket);
+void change_status(int client_socket, const char *new_status);
+void send_message(char *recipient_username, char *message, int sender_socket);
+void send_user_info(int client_socket, char *username);
+void send_response(int client_socket, int option, int code, char *message);
+void broadcast_message(char *message, int sender_socket);
+void send_simple_response(int client_socket, const char *message); 
+
+
 void *handle_client(void *arg) {
     int client_socket = *((int *)arg);
     int option;
@@ -60,24 +73,26 @@ void handle_request(int client_socket, int option) {
         case 2: 
             {
                 char recipient[50], message_text[BUFFER_SIZE];
-                if (recv(client_socket, &recipient, sizeof(recipient), 0) <= 0 || recv(client_socket, &message_text, sizeof(message_text), 0) <= 0) {
+                if (recv(client_socket, recipient, sizeof(recipient), 0) <= 0 || recv(client_socket, message_text, sizeof(message_text), 0) <= 0) {
                     perror("Error receiving message data from client");
                     close(client_socket);
                     pthread_exit(NULL);
                 }
-                send_message(client_socket, recipient, message_text);
+
+                send_message(recipient, message_text, client_socket);
 
             }
             break;
         case 3: 
             {
-                char username[50], status[20];
-                if (recv(client_socket, &username, sizeof(username), 0) <= 0 || recv(client_socket, &status, sizeof(status), 0) <= 0) {
+                char status[20];
+                if (recv(client_socket, &status, sizeof(status), 0) <= 0) {
                     perror("Error receiving status change data from client");
                     close(client_socket);
                     pthread_exit(NULL);
                 }
-                change_status(username, status);
+                
+                change_status(client_socket, status);
             }
             break;
         case 4:
@@ -155,10 +170,12 @@ void send_connected_users(int client_socket) {
     }
 }
 
+void send_simple_response(int client_socket, const char *message) {
+    send(client_socket, message, strlen(message) + 1, 0); 
+}
 
 void change_status(int client_socket, const char *new_status) {
     pthread_mutex_lock(&server.mutex);
-
     for (int i = 0; i < server.client_count; i++) {
         if (server.clients[i].socket == client_socket) {  
             strcpy(server.clients[i].status, new_status);
