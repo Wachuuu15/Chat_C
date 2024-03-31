@@ -88,8 +88,7 @@ int main(int argc, char *argv[]) {
                 break;
             case 3:
 
-                option = 5;  
-
+                option = 3;  
                 send(sock, &option, sizeof(int), 0);
                 printf("Elige un nuevo estado:\n");
                 printf("1. ACTIVO\n");
@@ -117,10 +116,10 @@ int main(int argc, char *argv[]) {
                         break;
                 }
 
-                option = 3;  //VERIFICAR
-                send(sock, &option, sizeof(int), 0);  
+                send(sock, new_status, strlen(new_status) + 1, 0);
 
-                send(sock, new_status, strlen(new_status) + 1, 0);  
+                option = 5;
+                send(sock, &option, sizeof(int), 0);
 
                 break;
             case 4:

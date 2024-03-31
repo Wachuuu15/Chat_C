@@ -177,15 +177,12 @@ void send_simple_response(int client_socket, const char *message) {
 void change_status(int client_socket, const char *new_status) {
     pthread_mutex_lock(&server.mutex);
     for (int i = 0; i < server.client_count; i++) {
-        if (server.clients[i].socket == client_socket) {  
+        if (server.clients[i].socket == client_socket) {
             strcpy(server.clients[i].status, new_status);
-
             send_simple_response(client_socket, "Estado actualizado con éxito.");
-
             break;
         }
     }
-
     pthread_mutex_unlock(&server.mutex);
 }
 
