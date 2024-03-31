@@ -132,7 +132,7 @@ void handle_request(int client_socket, int option) {
     }
 }
 
-void register_user(int client_socket, char *username, char *ip) {
+void register_user(int client_socket, char *username, char *ip_address) {
     int code;
     char message[BUFFER_SIZE];
 
@@ -150,7 +150,7 @@ void register_user(int client_socket, char *username, char *ip) {
     }
 
     strcpy(server.clients[server.client_count].username, username);
-    strcpy(server.clients[server.client_count].ip, ip);
+    strcpy(server.clients[server.client_count].ip, ip_address);
     strcpy(server.clients[server.client_count].status, "ACTIVO");
     server.clients[server.client_count].socket = client_socket;
     server.client_count++;

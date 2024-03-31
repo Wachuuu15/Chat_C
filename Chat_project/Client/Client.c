@@ -68,61 +68,59 @@ int main(int argc, char *argv[]) {
                 inet_ntop(AF_INET, &(addr.sin_addr), ip_address, INET_ADDRSTRLEN);
                 send(sock, ip_address, strlen(ip_address), 0);
 
-                bzero(buffer, BUFFER_SIZE);
-                recv(sock, buffer, BUFFER_SIZE, 0);
-                printf("Server: %s\n", buffer);
+                printf("Ya está registrado: %s\n", username);
 
-            break;
-            case 2:
-                    option = 2;  // verificar
-                    send(sock, &option, sizeof(int), 0); 
-    
-                    char recipient_username[50];
-                    printf("Enter recipient username: ");
-                    fgets(recipient_username, 50, stdin);
-                    recipient_username[strcspn(recipient_username, "\n")] = '\0'; 
-                    send(sock, recipient_username, strlen(recipient_username), 0); // envia el nombre de usuario del destinatario
-
-                    printf("Enter message to send: ");
-                    fgets(message, BUFFER_SIZE, stdin);
-                    message[strcspn(message, "\n")] = '\0'; 
-                    send(sock, message, strlen(message), 0); // envia el mensaje privado
                 break;
-                case 3:
-                    
-                    option = 5;  
+            case 2:
+                option = 2;  // verificar
+                send(sock, &option, sizeof(int), 0); 
 
-                    send(sock, &option, sizeof(int), 0);
-                    printf("Elige un nuevo estado:\n");
-                    printf("1. ACTIVO\n");
-                    printf("2. OCUPADO\n");
-                    printf("3. INACTIVO\n");
-                    printf("Ingresa el número de tu nuevo estado: ");
+                char recipient_username[50];
+                printf("Enter recipient username: ");
+                fgets(recipient_username, 50, stdin);
+                recipient_username[strcspn(recipient_username, "\n")] = '\0'; 
+                send(sock, recipient_username, strlen(recipient_username), 0); // envia el nombre de usuario del destinatario
 
-                    int choice;
-                    scanf("%d", &choice);
-                    while (getchar() != '\n');  // Limpia el buffer de entrada
+                printf("Enter message to send: ");
+                fgets(message, BUFFER_SIZE, stdin);
+                message[strcspn(message, "\n")] = '\0'; 
+                send(sock, message, strlen(message), 0); // envia el mensaje privado
+                break;
+            case 3:
 
-                    char *new_status;
-                    switch (choice) {
-                        case 1:
-                            new_status = "ACTIVO";
-                            break;
-                        case 2:
-                            new_status = "OCUPADO";
-                            break;
-                        case 3:
-                            new_status = "INACTIVO";
-                            break;
-                        default:
-                            printf("Opción no válida. Selecciona un estado válido.\n");
-                            break;
-                    }
+                option = 5;  
 
-                    option = 3;  //VERIFICAR
-                    send(sock, &option, sizeof(int), 0);  
+                send(sock, &option, sizeof(int), 0);
+                printf("Elige un nuevo estado:\n");
+                printf("1. ACTIVO\n");
+                printf("2. OCUPADO\n");
+                printf("3. INACTIVO\n");
+                printf("Ingresa el número de tu nuevo estado: ");
 
-                    send(sock, new_status, strlen(new_status) + 1, 0);  
+                int choice;
+                scanf("%d", &choice);
+                while (getchar() != '\n');  // Limpia el buffer de entrada
+
+                char *new_status;
+                switch (choice) {
+                    case 1:
+                        new_status = "ACTIVO";
+                        break;
+                    case 2:
+                        new_status = "OCUPADO";
+                        break;
+                    case 3:
+                        new_status = "INACTIVO";
+                        break;
+                    default:
+                        printf("Opción no válida. Selecciona un estado válido.\n");
+                        break;
+                }
+
+                option = 3;  //VERIFICAR
+                send(sock, &option, sizeof(int), 0);  
+
+                send(sock, new_status, strlen(new_status) + 1, 0);  
 
                 break;
             case 4:
@@ -141,37 +139,37 @@ int main(int argc, char *argv[]) {
                     }
                 break;
             case 5:
-                    option = 5;  
+                option = 5;  
 
-                    send(sock, &option, sizeof(int), 0);
+                send(sock, &option, sizeof(int), 0);
 
-                    char target_username[50];
-                    printf("Enter username to get information: ");
-                    fgets(target_username, 50, stdin);
-                    target_username[strcspn(target_username, "\n")] = '\0';
-                    send(sock, target_username, strlen(target_username), 0);
+                char target_username[50];
+                printf("Enter username to get information: ");
+                fgets(target_username, 50, stdin);
+                target_username[strcspn(target_username, "\n")] = '\0';
+                send(sock, target_username, strlen(target_username), 0);
 
-                    int user_found;
-                    recv(sock, &user_found, sizeof(int), 0);  // Recibimos el indicador de usuario encontrado o no
+                int user_found;
+                recv(sock, &user_found, sizeof(int), 0);  // Recibimos el indicador de usuario encontrado o no
 
-                    if (user_found) {
-                        // Si se encontró el usuario, recibimos la información
-                        char username[50] = {0};
-                        char ip[INET_ADDRSTRLEN] = {0};
-                        char status[20] = {0};
+                if (user_found) {
+                    // Si se encontró el usuario, recibimos la información
+                    char username[50] = {0};
+                    char ip[INET_ADDRSTRLEN] = {0};
+                    char status[20] = {0};
 
-                        recv(sock, &username, sizeof(username), 0);
-                        recv(sock, &ip, sizeof(ip), 0);
-                        recv(sock, &status, sizeof(status), 0);
+                    recv(sock, &username, sizeof(username), 0);
+                    recv(sock, &ip, sizeof(ip), 0);
+                    recv(sock, &status, sizeof(status), 0);
 
-                        // recibido
-                        printf("User info:\n");
-                        printf("- Username: %s\n", username);
-                        printf("- IP: %s\n", ip);
-                        printf("- Status: %s\n", status);
-                    } else {
-                        printf("User not found.\n");
-                    }
+                    // recibido
+                    printf("User info:\n");
+                    printf("- Username: %s\n", username);
+                    printf("- IP: %s\n", ip);
+                    printf("- Status: %s\n", status);
+                } else {
+                    printf("User not found.\n");
+                }
 
                 break;
             case 6:
