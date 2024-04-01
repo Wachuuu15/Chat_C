@@ -233,8 +233,10 @@ void send_response(int client_socket, int option, int code, char *message) {
 void broadcast_message(char *message, int sender_socket) {
     pthread_mutex_lock(&server.mutex);
 
+    printf("Mensaje broadcast recibido: %s\n", message);
+
     for (int i = 0; i < server.client_count; i++) {
-        if (server.clients[i].socket != sender_socket) {  
+        if (server.clients[i].socket != sender_socket) {
             send(server.clients[i].socket, message, strlen(message), 0);
         }
     }
