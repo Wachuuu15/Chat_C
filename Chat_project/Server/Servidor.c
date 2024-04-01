@@ -70,7 +70,7 @@ void handle_request(int client_socket, int option) {
                 register_user(client_socket, username, ip);
             }
             break;
-        case 2: 
+        case 2:
             {
                 char recipient[50], message_text[BUFFER_SIZE];
                 if (recv(client_socket, recipient, sizeof(recipient), 0) <= 0 || recv(client_socket, message_text, sizeof(message_text), 0) <= 0) {
@@ -79,8 +79,23 @@ void handle_request(int client_socket, int option) {
                     pthread_exit(NULL);
                 }
 
+                int sender_index = -1;
+                for (int i = 0; i < server.client_count; i++) {
+                    if (server.clients[i].socket == client_socket) {
+                        sender_index = i;
+                        break;
+                    }
+                }
+
+                if (sender_index == -1) {
+                    perror("Error: Sender not found");
+                    close(client_socket);
+                    pthread_exit(NULL);
+                }
+
                 send_message(recipient, message_text, client_socket);
 
+                printf("Mensaje privado recibido de %s: %s\n", server.clients[sender_index].username, message_text);
             }
             break;
         case 3: 
@@ -190,11 +205,19 @@ void change_status(int client_socket, const char *new_status) {
 void send_message(char *recipient_username, char *message, int sender_socket) {
     pthread_mutex_lock(&server.mutex);
 
+    int recipient_found = 0;
     for (int i = 0; i < server.client_count; i++) {
         if (strcmp(server.clients[i].username, recipient_username) == 0) {
             send(server.clients[i].socket, message, strlen(message), 0);
+            recipient_found = 1;
             break;
         }
+    }
+
+    if (recipient_found) {
+        printf("Mensaje privado enviado a %s: %s\n", recipient_username, message);
+    } else {
+        printf("El usuario %s no está conectado.\n", recipient_username);
     }
 
     pthread_mutex_unlock(&server.mutex);
