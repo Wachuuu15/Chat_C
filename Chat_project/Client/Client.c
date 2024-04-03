@@ -40,8 +40,15 @@ int main(int argc, char *argv[]) {
     }
     printf("Connected to the server.\n");
     
-    int option; 
-    //send(sock, &option, sizeof(int), 0);
+    int option = 1;
+    send(sock, &option, sizeof(int), 0);
+    send(sock, username, strlen(username), 0);
+
+    char ip_address[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(addr.sin_addr), ip_address, INET_ADDRSTRLEN);
+    send(sock, ip_address, strlen(ip_address), 0);
+
+    printf("Ya está registrado: %s\n", username);
     
 
     while (1) {
@@ -51,41 +58,31 @@ int main(int argc, char *argv[]) {
         printf("3. Cambiar de estado\n");
         printf("4. Listar los usuarios conectados\n");
         printf("5. Obtener información de un usuario\n");
-        printf("6. Enviar mesajes grupalmente\n");
-        printf("7. Ver chat grupal\n");
-        printf("8. Ayuda\n");
-        printf("9. Salir\n");
+        printf("6. Chat grupal\n");
+        printf("7. Ayuda\n");
+        printf("8. Salir\n");
         printf("Elige una opción: ");
         scanf("%d", &option);
         getchar();
 
         switch (option) {
             case 1:
-                option = 1;
-                send(sock, &option, sizeof(int), 0);
-                send(sock, username, strlen(username), 0);
-
-                char ip_address[INET_ADDRSTRLEN];
-                inet_ntop(AF_INET, &(addr.sin_addr), ip_address, INET_ADDRSTRLEN);
-                send(sock, ip_address, strlen(ip_address), 0);
-
-                printf("Ya está registrado: %s\n", username);
-
+                printf("Ya estas registrado\n");
                 break;
             case 2:
-                option = 2;  // verificar
+                option = 2; 
                 send(sock, &option, sizeof(int), 0); 
 
                 char recipient_username[50];
                 printf("Enter recipient username: ");
                 fgets(recipient_username, 50, stdin);
                 recipient_username[strcspn(recipient_username, "\n")] = '\0'; 
-                send(sock, recipient_username, strlen(recipient_username), 0); // envia el nombre de usuario del destinatario
+                send(sock, recipient_username, strlen(recipient_username), 0); 
 
                 printf("Enter message to send: ");
                 fgets(message, BUFFER_SIZE, stdin);
                 message[strcspn(message, "\n")] = '\0'; 
-                send(sock, message, strlen(message), 0); // envia el mensaje privado
+                send(sock, message, strlen(message), 0);
                 break;
             case 3:
 
@@ -99,7 +96,7 @@ int main(int argc, char *argv[]) {
 
                 int choice;
                 scanf("%d", &choice);
-                while (getchar() != '\n');  // Limpia el buffer de entrada
+                while (getchar() != '\n'); 
 
                 char *new_status;
                 switch (choice) {
@@ -132,18 +129,17 @@ int main(int argc, char *argv[]) {
 
                 printf("Usuarios conectados:\n");
                 for (int i = 0; i < num_users; i++) {
-                    char user_info[100] = {0}; // Asegúrate de que esto coincida con el tamaño en el servidor
-                    recv(sock, user_info, sizeof(user_info), 0); // Recibe la cadena con el nombre de usuario y la IP
+                    char user_info[100] = {0}; 
+                    recv(sock, user_info, sizeof(user_info), 0); 
 
                     char username[50], ip[INET_ADDRSTRLEN];
-                    sscanf(user_info, "%s %s", username, ip); // Extrae el nombre de usuario y la IP de la cadena
+                    sscanf(user_info, "%s %s", username, ip); 
 
-                    printf("- %s %s\n", username, ip); // Imprime el nombre de usuario y la IP separados
+                    printf("- %s %s\n", username, ip); 
                 }
                 break;
             case 5:
-                option = 5;  
-
+                option = 5;
                 send(sock, &option, sizeof(int), 0);
 
                 char target_username[50];
@@ -153,19 +149,18 @@ int main(int argc, char *argv[]) {
                 send(sock, target_username, strlen(target_username), 0);
 
                 int user_found;
-                recv(sock, &user_found, sizeof(int), 0);  // Recibimos el indicador de usuario encontrado o no
+                recv(sock, &user_found, sizeof(int), 0);
 
                 if (user_found) {
-                    // Si se encontró el usuario, recibimos la información
                     char username[50] = {0};
                     char ip[INET_ADDRSTRLEN] = {0};
                     char status[20] = {0};
 
                     recv(sock, &username, sizeof(username), 0);
                     recv(sock, &ip, sizeof(ip), 0);
-                    recv(sock, &status, sizeof(status), 0);
 
-                    // recibido
+                    // Recibe y muestra el estado actualizado del servidor
+                    recv(sock, &status, sizeof(status), 0);
                     printf("User info:\n");
                     printf("- Username: %s\n", username);
                     printf("- IP: %s\n", ip);
@@ -176,39 +171,62 @@ int main(int argc, char *argv[]) {
 
                 break;
             case 6:
-                    printf("Enter message to broadcast ('quit' to exit): ");
-                    fgets(buffer, BUFFER_SIZE, stdin);
-                    buffer[strcspn(buffer, "\n")] = 0;  // Remueve el salto de línea
+                int submenu_option;
+                char buffer[BUFFER_SIZE];
 
-                    if (strcmp(buffer, "quit") == 0) {
-                        break;  
+                while (1) {
+                    printf("\nSubmenú de Envío de Mensajes:\n");
+                    printf("1. Enviar mensajes\n");
+                    printf("2. Ver chat grupales\n");
+                    printf("3. Regresar al menú principal\n");
+                    printf("Elige una opción: ");
+                    scanf("%d", &submenu_option);
+                    getchar();
+
+                    switch (submenu_option) {
+                        case 1:
+                            printf("Enter message to broadcast ('quit' to exit): ");
+                            fgets(buffer, BUFFER_SIZE, stdin);
+                            buffer[strcspn(buffer, "\n")] = 0;
+
+                            if (strcmp(buffer, "quit") == 0) {
+                                break;
+                            }
+
+                            option = 6;
+                            send(sock, &option, sizeof(int), 0);
+                            send(sock, buffer, strlen(buffer), 0);
+                            break;
+                        case 2:
+                            option = 7;
+                            send(sock, &option, sizeof(int), 0);
+
+                            printf("Historial de mensajes del chat grupal:\n");
+                            while (1) {
+                                char history_message[BUFFER_SIZE];
+                                int read = recv(sock, history_message, BUFFER_SIZE - 1, 0);
+                                if (read > 0) {
+                                    history_message[read] = '\0';
+                                    printf("%s\n", history_message);
+                                    break;
+                                } else {
+                                    break;
+                                }
+                            }
+
+                            break;
+                        case 3:
+                            break; 
+                        default:
+                            printf("Opción no válida. Por favor, intenta de nuevo.\n");
                     }
 
-                    send(sock, &option, sizeof(int), 0);
-                    send(sock, buffer, strlen(buffer), 0);
-                break;
-            case 7:
-                option = 7;
-                send(sock, &option, sizeof(int), 0); 
-
-                // Recibe y muestra el historial de mensajes del chat grupal
-                printf("Historial de mensajes del chat grupal:\n");
-                while(1) {
-                    char history_message[BUFFER_SIZE];
-                    int read = recv(sock, history_message, BUFFER_SIZE, 0);
-                    if (read > 0) {
-                        // Si el mensaje es un indicador de fin del historial, rompe el bucle
-                        if (strcmp(history_message, "END_OF_HISTORY") == 0) {
-                            break;
-                        }
-                        printf("%s\n", history_message);
-                    } else {
-                        // Maneja errores o desconexión
+                    if (submenu_option == 3) {
                         break;
                     }
                 }
                 break;
-            case 8:
+            case 7:
                     printf("\nComandos disponibles:\n");
                     printf("1. Chatear con todos los usuarios\n");
                     printf("2. Enviar y recibir mensajes directos, privados\n");
@@ -218,9 +236,11 @@ int main(int argc, char *argv[]) {
                     printf("6. Ayuda\n");
                     printf("7. Salir\n");
                 break;
-            case 9:
+            case 8:
+                option = 8;
+                send(sock, &option, sizeof(int), 0); 
                 printf("Saliendo...\n");
-                close(sock);
+                close(sock); 
                 return 0;
             default:
                 printf("Opción no válida. Por favor, intenta de nuevo.\n");

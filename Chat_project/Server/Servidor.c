@@ -16,7 +16,7 @@ typedef struct {
     char username[50];
     char ip[INET_ADDRSTRLEN];
     char status[20];
-} Client;  // Mover esta definición antes de ServerInfo
+} Client; 
 
 typedef struct {
     char messages[MAX_MESSAGES][BUFFER_SIZE];
@@ -50,15 +50,16 @@ void *handle_client(void *arg) {
     int client_socket = *((int *)arg);
     int option;
 
-    if (recv(client_socket, &option, sizeof(option), 0) <= 0) {
-        perror("Error receiving option from client");
-        close(client_socket);
-        pthread_exit(NULL);
+    while (1) {
+        if (recv(client_socket, &option, sizeof(option), 0) <= 0) {
+            perror("Error receiving option from client");
+            break;
+        }
+
+        handle_request(client_socket, option);
     }
 
-    handle_request(client_socket, option);
-
-    close(client_socket);
+    // close(client_socket);
     pthread_exit(NULL);
 }
 
@@ -147,11 +148,13 @@ void handle_request(int client_socket, int option) {
             }
             break;
         case 7:
-      
             send_group_chat_history(client_socket);
-
-        break;
-    
+            break;
+        case 8:
+            printf("Cliente desconectado.\n");
+            close(client_socket); 
+            pthread_exit(NULL); 
+            break;
         default:
             code = 500;
             sprintf(message, "Error: Invalid option");
@@ -219,7 +222,7 @@ void *listen_for_messages(void *sock) {
             puts("Disconnected from the server.");
             break;
         } else {
-            // Manejar errores
+            // else
         }
     }
 
@@ -228,15 +231,21 @@ void *listen_for_messages(void *sock) {
 
 void change_status(int client_socket, const char *new_status) {
     pthread_mutex_lock(&server.mutex);
+    char username[50];
     for (int i = 0; i < server.client_count; i++) {
         if (server.clients[i].socket == client_socket) {
+            strcpy(username, server.clients[i].username);
             strcpy(server.clients[i].status, new_status);
             send_simple_response(client_socket, "Estado actualizado con éxito.");
+
             break;
         }
     }
     pthread_mutex_unlock(&server.mutex);
+
+    printf("El usuario %s cambió de status a %s\n", username, new_status);
 }
+
 
 
 void send_message(char *recipient_username, char *message, int sender_socket) {
@@ -297,19 +306,39 @@ void send_group_chat_history(int client_socket) {
         send(client_socket, server.chat_history.messages[i], strlen(server.chat_history.messages[i]), 0);
     }
 
+    const char *end_marker = "END_OF_HISTORY";
+    send(client_socket, end_marker, strlen(end_marker), 0);
+
     pthread_mutex_unlock(&server.mutex);
 }
 
 void broadcast_message(char *message, int sender_socket) {
     pthread_mutex_lock(&server.mutex);
 
+    char sender_username[50];
+    int sender_index = -1;
+    for (int i = 0; i < server.client_count; i++) {
+        if (server.clients[i].socket == sender_socket) {
+            sender_index = i;
+            strcpy(sender_username, server.clients[i].username);
+            break;
+        }
+    }
+
+    char formatted_message[BUFFER_SIZE];
+    snprintf(formatted_message, BUFFER_SIZE, "%s: %s\n", sender_username, message); // Agregar salto de línea
+
     if (server.chat_history.message_count < MAX_MESSAGES) {
-        strcpy(server.chat_history.messages[server.chat_history.message_count], message);
+        strcpy(server.chat_history.messages[server.chat_history.message_count], formatted_message);
         server.chat_history.message_count++;
     }
 
     for (int i = 0; i < server.client_count; i++) {
-        send(server.clients[i].socket, message, strlen(message), 0);
+        send(server.clients[i].socket, formatted_message, strlen(formatted_message), 0);
+    }
+
+    if (server.chat_history.message_count >= MAX_MESSAGES) {
+        server.chat_history.message_count = 0;
     }
 
     pthread_mutex_unlock(&server.mutex);
