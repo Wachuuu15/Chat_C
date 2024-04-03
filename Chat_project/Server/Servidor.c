@@ -187,8 +187,11 @@ void register_user(int client_socket, char *username, char *ip_address) {
     sprintf(message, "User '%s' registered successfully", username);
     send_response(client_socket, 1, code, message);
 
+    printf("Nuevo cliente conectado: %s\n", username);
+
     pthread_mutex_unlock(&server.mutex);
 }
+
 
 void send_connected_users(int client_socket) {
     int count = server.client_count;
