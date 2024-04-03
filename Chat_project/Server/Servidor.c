@@ -9,18 +9,25 @@
 #define MAX_CLIENTS 100
 #define BUFFER_SIZE 1024
 #define DEFAULT_PORT 8888
+#define MAX_MESSAGES 500 
 
 typedef struct {
     int socket;
     char username[50];
     char ip[INET_ADDRSTRLEN];
     char status[20];
-} Client;
+} Client;  // Mover esta definición antes de ServerInfo
+
+typedef struct {
+    char messages[MAX_MESSAGES][BUFFER_SIZE];
+    int message_count;
+} ChatHistory;
 
 typedef struct {
     Client clients[MAX_CLIENTS];
     int client_count;
     pthread_mutex_t mutex;
+    ChatHistory chat_history;
 } ServerInfo;
 
 ServerInfo server;
@@ -36,6 +43,7 @@ void send_user_info(int client_socket, char *username);
 void send_response(int client_socket, int option, int code, char *message);
 void broadcast_message(char *message, int sender_socket);
 void send_simple_response(int client_socket, const char *message); 
+void send_group_chat_history(int client_socket);
 
 
 void *handle_client(void *arg) {
@@ -138,6 +146,11 @@ void handle_request(int client_socket, int option) {
                 broadcast_message(message, client_socket);
             }
             break;
+        case 7:
+      
+            send_group_chat_history(client_socket);
+
+        break;
     
         default:
             code = 500;
@@ -181,12 +194,33 @@ void send_connected_users(int client_socket) {
     int count = server.client_count;
     send(client_socket, &count, sizeof(int), 0);
     for (int i = 0; i < server.client_count; i++) {
-        send(client_socket, server.clients[i].username, sizeof(server.clients[i].username), 0);
+        char user_info[100];
+        sprintf(user_info, "%s %s", server.clients[i].username, server.clients[i].ip);
+        send(client_socket, user_info, sizeof(user_info),0);
     }
 }
 
 void send_simple_response(int client_socket, const char *message) {
     send(client_socket, message, strlen(message) + 1, 0); 
+}
+
+void *listen_for_messages(void *sock) {
+    int server_socket = *((int *)sock);
+    char message[BUFFER_SIZE];
+
+    while(1) {
+        int read = recv(server_socket, message, BUFFER_SIZE, 0);
+        if (read > 0) {
+            printf("%s\n", message);
+        } else if (read == 0) {
+            puts("Disconnected from the server.");
+            break;
+        } else {
+            // Manejar errores
+        }
+    }
+
+    return NULL;
 }
 
 void change_status(int client_socket, const char *new_status) {
@@ -253,15 +287,26 @@ void send_response(int client_socket, int option, int code, char *message) {
     send(client_socket, message, strlen(message), 0);
 }
 
+void send_group_chat_history(int client_socket) {
+    pthread_mutex_lock(&server.mutex);
+
+    for (int i = 0; i < server.chat_history.message_count; i++) {
+        send(client_socket, server.chat_history.messages[i], strlen(server.chat_history.messages[i]), 0);
+    }
+
+    pthread_mutex_unlock(&server.mutex);
+}
+
 void broadcast_message(char *message, int sender_socket) {
     pthread_mutex_lock(&server.mutex);
 
-    printf("Mensaje broadcast recibido: %s\n", message);
+    if (server.chat_history.message_count < MAX_MESSAGES) {
+        strcpy(server.chat_history.messages[server.chat_history.message_count], message);
+        server.chat_history.message_count++;
+    }
 
     for (int i = 0; i < server.client_count; i++) {
-        if (server.clients[i].socket != sender_socket) {
-            send(server.clients[i].socket, message, strlen(message), 0);
-        }
+        send(server.clients[i].socket, message, strlen(message), 0);
     }
 
     pthread_mutex_unlock(&server.mutex);
@@ -288,6 +333,7 @@ int main(int argc, char *argv[]) {
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;
     server_addr.sin_port = htons(port);
+    server.chat_history.message_count = 0;
 
     if (bind(server_socket, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
         perror("Bind failed");
@@ -315,6 +361,8 @@ int main(int argc, char *argv[]) {
             exit(EXIT_FAILURE);
         }
     }
+
+    
 
     close(server_socket);
     pthread_mutex_destroy(&server.mutex);

@@ -51,9 +51,10 @@ int main(int argc, char *argv[]) {
         printf("3. Cambiar de estado\n");
         printf("4. Listar los usuarios conectados\n");
         printf("5. Obtener información de un usuario\n");
-        printf("6. Chatear grupalmente\n");
-        printf("7. Ayuda\n");
-        printf("8. Salir\n");
+        printf("6. Enviar mesajes grupalmente\n");
+        printf("7. Ver chat grupal\n");
+        printf("8. Ayuda\n");
+        printf("9. Salir\n");
         printf("Elige una opción: ");
         scanf("%d", &option);
         getchar();
@@ -126,16 +127,19 @@ int main(int argc, char *argv[]) {
                 option = 4;  
                 send(sock, &option, sizeof(int), 0);
 
-                    int num_users;
-                    recv(sock, &num_users, sizeof(int), 0);
+                int num_users;
+                recv(sock, &num_users, sizeof(int), 0); 
 
-                    // Recibe y muestra la lista de usuarios conectados
-                    printf("Connected users:\n");
-                    for (int i = 0; i < num_users; i++) {
-                        char username[50] = {0};
-                        recv(sock, username, sizeof(username), 0);
-                        printf("- %s\n", username);
-                    }
+                printf("Usuarios conectados:\n");
+                for (int i = 0; i < num_users; i++) {
+                    char user_info[100] = {0}; // Asegúrate de que esto coincida con el tamaño en el servidor
+                    recv(sock, user_info, sizeof(user_info), 0); // Recibe la cadena con el nombre de usuario y la IP
+
+                    char username[50], ip[INET_ADDRSTRLEN];
+                    sscanf(user_info, "%s %s", username, ip); // Extrae el nombre de usuario y la IP de la cadena
+
+                    printf("- %s %s\n", username, ip); // Imprime el nombre de usuario y la IP separados
+                }
                 break;
             case 5:
                 option = 5;  
@@ -184,6 +188,27 @@ int main(int argc, char *argv[]) {
                     send(sock, buffer, strlen(buffer), 0);
                 break;
             case 7:
+                option = 7;
+                send(sock, &option, sizeof(int), 0); 
+
+                // Recibe y muestra el historial de mensajes del chat grupal
+                printf("Historial de mensajes del chat grupal:\n");
+                while(1) {
+                    char history_message[BUFFER_SIZE];
+                    int read = recv(sock, history_message, BUFFER_SIZE, 0);
+                    if (read > 0) {
+                        // Si el mensaje es un indicador de fin del historial, rompe el bucle
+                        if (strcmp(history_message, "END_OF_HISTORY") == 0) {
+                            break;
+                        }
+                        printf("%s\n", history_message);
+                    } else {
+                        // Maneja errores o desconexión
+                        break;
+                    }
+                }
+                break;
+            case 8:
                     printf("\nComandos disponibles:\n");
                     printf("1. Chatear con todos los usuarios\n");
                     printf("2. Enviar y recibir mensajes directos, privados\n");
@@ -193,7 +218,7 @@ int main(int argc, char *argv[]) {
                     printf("6. Ayuda\n");
                     printf("7. Salir\n");
                 break;
-            case 8:
+            case 9:
                 printf("Saliendo...\n");
                 close(sock);
                 return 0;
